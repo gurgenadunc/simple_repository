@@ -1,0 +1,9 @@
+*.swp
+*.swo
+*~
+*.iml
+.idea/
+target/
+results/
+test-output/
+
