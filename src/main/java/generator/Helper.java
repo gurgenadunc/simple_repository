@@ -9,12 +9,21 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Helper {
 
     public static Response sendGetRequest(String ...path) throws IOException {
         RequestBuilder requestBuilder = new RequestBuilder(Constants.CONTENT_ENDPOINT);
+        requestBuilder.addHeader(Constants.CONTENT_HEADERS);
+        requestBuilder.addPathParameters(path);
+        return requestBuilder.get();
+    }
+
+    public static Response sendGetRequest(Map<String,String> queryParams, String ...path) throws IOException {
+        RequestBuilder requestBuilder = new RequestBuilder(Constants.CONTENT_ENDPOINT);
+        requestBuilder.addQueryParameters(queryParams);
         requestBuilder.addHeader(Constants.CONTENT_HEADERS);
         requestBuilder.addPathParameters(path);
         return requestBuilder.get();

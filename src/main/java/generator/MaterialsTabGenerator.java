@@ -2,16 +2,10 @@ package generator;
 
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
-import requests.RequestBuilder;
 import requests.Response;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.io.File;
 public class MaterialsTabGenerator {
 
     @Override
@@ -19,15 +13,15 @@ public class MaterialsTabGenerator {
         return super.clone();
     }
 
-    private static final String BASE_URL = "https://content-prod.api.beachbodyondemand.com";
     public static void main(String[] args) throws IOException {
-        List<String> slugs = Arrays.asList(sendGetRequest(true,"v4","programs").get("$.items[*].slug").split("~")).stream().map(String::trim).collect(Collectors.toList());
+        Constants.QUERY_PARAMS.put("category","nutrition,fitness");
+        Response res = Helper.sendGetRequest(Constants.QUERY_PARAMS, "v4","programs");
+        List<String> slugs = Helper.getSlugs(res);
         StringBuffer buffer = new StringBuffer();
-
 
         for (String slug : slugs) {
 
-            Response rr = sendGetRequest(false,"v4", "programs", slug);
+            Response rr = Helper.sendGetRequest("v4", "programs", slug);
 
             String ent = rr.get("$.items[0].entitlementGroup");
             if(slug.equals("2b-mindset")) {
@@ -45,7 +39,7 @@ public class MaterialsTabGenerator {
             buffer.append(String.format("%s.programType=%s", slug , s));
             buffer.append("\n");
 
-            Response r = sendGetRequest(false,"programMaterials", slug);
+            Response r = Helper.sendGetRequest("programMaterials", slug);
             buffer.append(String.format("%s.materialGroups=%s", slug ,r.get("$.items[*].title")));
             buffer.append("\n");
             JSONArray materials = JsonPath.read(r.body(), "$.items[*]");
@@ -85,8 +79,7 @@ public class MaterialsTabGenerator {
             }
 
         }
-        writeInFile("program_materials",buffer.toString());
-        //writeInFile("nutrition",buffer.toString());
+        Helper.writeInFile(Constants.PROGRAM_MATERIALS_PROPERTY_FILE_NAME,buffer.toString());
     }
 
     private static String cleanTextContent(String text)
@@ -101,25 +94,6 @@ public class MaterialsTabGenerator {
 //        text = text.replaceAll("\\p{C}", "");
 
         return text.trim();
-    }
-
-    public static Response sendGetRequest(boolean s, String ...path) throws IOException {
-        RequestBuilder requestBuilder = new RequestBuilder(BASE_URL);
-        requestBuilder.addHeader("Accept","application/json");
-        requestBuilder.addPathParameters(path);
-        requestBuilder.addHeader("x-api-key", "2yPXMA9Tsd529LCH6WhQA13F5iO40mRW6qLTwgnh");
-        if(s) requestBuilder.addQueryParameter("category", "nutrition,fitness");
-        Response response = requestBuilder.get();
-        System.out.println(response.getCurl());
-        return response;
-    }
-
-    public static void writeInFile(String fileName, String text) throws IOException {
-        File file = new File("src/main/resources/" + (fileName.endsWith(".properties") ? fileName : (fileName + ".properties")));
-        if (!file.exists()) file.createNewFile();
-        BufferedWriter bf = new BufferedWriter(new FileWriter(file));
-        bf.write(text);
-        bf.flush();
     }
 
 

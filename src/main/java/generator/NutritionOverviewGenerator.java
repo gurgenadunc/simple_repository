@@ -5,16 +5,10 @@ import net.minidev.json.JSONArray;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
-import requests.RequestBuilder;
 import requests.Response;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.io.File;
 public class NutritionOverviewGenerator {
 
     @Override
@@ -28,15 +22,15 @@ public class NutritionOverviewGenerator {
         return first + " and " + second;
     }
 
-    private static final String BASE_URL = "https://content-prod.api.beachbodyondemand.com";
     public static void main(String[] args) throws IOException {
-        List<String> slugs = Arrays.asList(sendGetRequest(true,"v4","programs").get("$.items[*].slug").split("~")).stream().map(String::trim).collect(Collectors.toList());
+        Response res = Helper.sendGetRequest(Constants.QUERY_PARAMS,"v4","programs");
+        List<String> slugs = Helper.getSlugs(res);
         StringBuffer buffer = new StringBuffer();
-        writeInFile("program_materials",buffer.toString());
+        Helper.writeInFile(Constants.PROGRAM_MATERIALS_PROPERTY_FILE_NAME,buffer.toString());
 
 
         for (String s : slugs) {
-            Response response = sendGetRequest(false,"v4","programs", s);
+            Response response = Helper.sendGetRequest("v4","programs", s);
             String d = response.get("$.items[0].brandCode");
             String slug = response.get("$.items[0].slug").toLowerCase().replaceAll(" ","").replaceAll(":","");
             String title = response.get("$.items[0].title").replaceAll(" ", "").toLowerCase();
@@ -119,7 +113,7 @@ public class NutritionOverviewGenerator {
             }
             if (!response.get("$.items[0].successStory").equals("[]") && !response.get("$.items[0].successStory").isEmpty()) {
                 String successStorySlug = response.get("$.items[0].successStory[0].slug");
-                Response successStoryesponse = sendGetRequest(false,"v1","successStories", successStorySlug);
+                Response successStoryesponse = Helper.sendGetRequest("v1","successStories", successStorySlug);
                 String beforeImage = successStoryesponse.get("$.items[0].images.beforeImage.web.desktop.sourceUrl")
                         .replaceAll("https://d2rxohj08n82d5.cloudfront.net", "")
                         .replaceAll("http://d2rxohj08n82d5.cloudfront.net", "");
@@ -159,7 +153,7 @@ public class NutritionOverviewGenerator {
             else {
                 ss = String.format("%s-related-content", slug);
             }
-            Response relatedesponse = sendGetRequest(false,"socialFeeds", ss);
+            Response relatedesponse = Helper.sendGetRequest("socialFeeds", ss);
             String relatedTitle = relatedesponse.get("$.items[0].title");
             buffer.append(String.format("%s.relatedContent.title=%s", title, relatedTitle));
             buffer.append("\n");
@@ -179,26 +173,6 @@ public class NutritionOverviewGenerator {
                 buffer.append("\n");
             }
         }
-        writeInFile("nutrition",buffer.toString());
-    }
-
-    public static Response sendGetRequest(boolean s, String ...path) throws IOException {
-        RequestBuilder requestBuilder = new RequestBuilder(BASE_URL);
-        requestBuilder.addHeader("Accept","application/json");
-        requestBuilder.addPathParameters(path);
-        if(s) requestBuilder.addQueryParameter("category", "nutrition");
-        requestBuilder.addHeader("x-api-key", "2yPXMA9Tsd529LCH6WhQA13F5iO40mRW6qLTwgnh");
-
-        Response response = requestBuilder.get();
-
-        return response;
-    }
-
-    public static void writeInFile(String fileName, String text) throws IOException {
-        File file = new File("src/main/resources/" + (fileName.endsWith(".properties") ? fileName : (fileName + ".properties")));
-        if (!file.exists()) file.createNewFile();
-        BufferedWriter bf = new BufferedWriter(new FileWriter(file));
-        bf.write(text);
-        bf.flush();
+        Helper.writeInFile(Constants.NUTRITION_PROPERTY_FILE_NAME,buffer.toString());
     }
 }

@@ -2,16 +2,10 @@ package generator;
 
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
-import requests.RequestBuilder;
 import requests.Response;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.io.File;
 public class NutritionWorkoutsGenerator {
 
     @Override
@@ -19,13 +13,13 @@ public class NutritionWorkoutsGenerator {
         return super.clone();
     }
 
-    private static final String BASE_URL = "https://content-prod.api.beachbodyondemand.com";
     public static void main(String[] args) throws IOException {
-        List<String> slugs = Arrays.asList(sendGetRequest(true,"v4","programs").get("$.items[*].slug").split("~")).stream().map(String::trim).collect(Collectors.toList());
+        Response res = Helper.sendGetRequest(Constants.QUERY_PARAMS,"v4","programs");
+        List<String> slugs = Helper.getSlugs(res);
         StringBuffer buffer = new StringBuffer();
         for (String slug : slugs) {
 
-            Response r = sendGetRequest(false,"v4", "programs", slug);
+            Response r = Helper.sendGetRequest("v4", "programs", slug);
             String ws = r.get("$.items[*].workoutGroups[*].groupName")
                     .replaceAll("\\s{2}", " ")
                     .replaceAll("\\h", " ");
@@ -118,26 +112,7 @@ public class NutritionWorkoutsGenerator {
                 "ultimate-portion-fix-master-series.video.groupName=April Ultimate Portion Fix Master Series\n" +
                 "ultimate-portion-fix-master-series.video.workoutName=Get Started\n" +
                 "ultimate-portion-fix-master-series.video.duration=206");
-        writeInFile("nutrition_workout_list",buffer.toString());
-    }
-
-    public static Response sendGetRequest(boolean s, String ...path) throws IOException {
-        RequestBuilder requestBuilder = new RequestBuilder(BASE_URL);
-        requestBuilder.addHeader("Accept","application/json");
-        requestBuilder.addPathParameters(path);
-        requestBuilder.addHeader("x-api-key", "2yPXMA9Tsd529LCH6WhQA13F5iO40mRW6qLTwgnh");
-        if(s) requestBuilder.addQueryParameter("category", "nutrition");
-        Response response = requestBuilder.get();
-        System.out.println(response.getCurl());
-        return response;
-    }
-
-    public static void writeInFile(String fileName, String text) throws IOException {
-        File file = new File("src/main/resources/" + (fileName.endsWith(".properties") ? fileName : (fileName + ".properties")));
-        if (!file.exists()) file.createNewFile();
-        BufferedWriter bf = new BufferedWriter(new FileWriter(file));
-        bf.write(text);
-        bf.flush();
+        Helper.writeInFile(Constants.NUTRITION_WORKOUT_LIST_PROPERTY_FILE_NAME,buffer.toString());
     }
 
 

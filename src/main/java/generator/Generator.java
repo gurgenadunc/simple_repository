@@ -6,16 +6,10 @@ import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import requests.RequestBuilder;
 import requests.Response;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.io.File;
 public class Generator {
 
     @Override
@@ -23,12 +17,13 @@ public class Generator {
         return super.clone();
     }
 
-    private static final String BASE_URL = "https://content-prod.api.beachbodyondemand.com";
     public static void main(String[] args) throws IOException {
-        List<String> slugs = Arrays.asList(sendGetRequest("v4","programs").get("$.items[*].slug").split("~")).stream().map(String::trim).collect(Collectors.toList());
+        Response res = Helper.sendGetRequest("v4","programs");
+        List<String> slugs = Helper.getSlugs(res);
+
         StringBuffer buffer = new StringBuffer();
         for (String s : slugs) {
-            Response response = sendGetRequest("v4","programs",s);
+            Response response = Helper.sendGetRequest("v4","programs",s);
             String slug = response.get("$.items[0].slug").toLowerCase().replaceAll(" ","").replaceAll(":","");
             String title = response.get("$.items[0].title");
             String description = response.get("$.items[0].longDescription.raw");
@@ -92,7 +87,7 @@ public class Generator {
             buffer.append("\n");
 
             String ss = response.get("items[0].social[0].slug");
-            Response relatedesponse = sendGetRequest("socialFeeds", ss);
+            Response relatedesponse = Helper.sendGetRequest("socialFeeds", ss);
             String relatedTitle = relatedesponse.get("$.items[0].title");
             buffer.append(String.format("%s.relatedContent.title=%s", slug, relatedTitle));
             buffer.append("\n");
@@ -140,7 +135,7 @@ public class Generator {
 
             if (!response.get("$.items[0].successStory").equals("[]") && !response.get("$.items[0].successStory").isEmpty()) {
                 String successStorySlug = response.get("$.items[0].successStory[0].slug");
-                Response successStoryesponse = sendGetRequest("v1","successStories", successStorySlug);
+                Response successStoryesponse = Helper.sendGetRequest("v1","successStories", successStorySlug);
                 String beforeImage = successStoryesponse.get("$.items[0].images.beforeImage.web.desktop.sourceUrl")
                         .replaceAll("https://d2rxohj08n82d5.cloudfront.net", "")
                         .replaceAll("http://d2rxohj08n82d5.cloudfront.net", "");
@@ -221,25 +216,7 @@ public class Generator {
                 "drcheng.url=dr-cheng\n" +
                 "gillianteigh.url=gillianteigh\n" +
                 "kathysmith.url=kathy-smith");
-        writeInFile("details",buffer.toString());
-
-    }
-
-    public static Response sendGetRequest(String ...path) throws IOException {
-        RequestBuilder requestBuilder = new RequestBuilder(BASE_URL);
-        requestBuilder.addHeader("Accept","application/json");
-        requestBuilder.addHeader("x-api-key", "2yPXMA9Tsd529LCH6WhQA13F5iO40mRW6qLTwgnh");
-        requestBuilder.addPathParameters(path);
-        Response response = requestBuilder.get();
-        return response;
-    }
-
-    public static void writeInFile(String fileName, String text) throws IOException {
-        File file = new File("src/main/resources/" + (fileName.endsWith(".properties") ? fileName : (fileName + ".properties")));
-        if (!file.exists()) file.createNewFile();
-        BufferedWriter bf = new BufferedWriter(new FileWriter(file));
-        bf.write(text);
-        bf.flush();
+        Helper.writeInFile(Constants.DETAILS_PROPERTY_FILE_NAME,buffer.toString());
     }
 
 }

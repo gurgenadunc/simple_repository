@@ -13,7 +13,6 @@ public class WorkoutTabGenerator {
         return super.clone();
     }
 
-    private static final String BASE_URL = "https://content-prod.api.beachbodyondemand.com";
     public static void main(String[] args) throws IOException {
         Response response = Helper.sendGetRequest("v4","programs");
         List<String> slugs = Helper.getSlugs(response);
